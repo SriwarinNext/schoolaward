@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบรวมผลงานสถานศึกษา - โรงเรียนศรีวารินทร์</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #f3f4f6; }
+        .hidden-section { display: none; }
+        .gradient-header { background: linear-gradient(135deg, #ec4899 0%, #3b82f6 100%); }
+        .card { background: white; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .btn-primary { background: linear-gradient(to right, #3b82f6, #2563eb); color: white; transition: all 0.3s; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .subject-box { transition: all 0.2s; border: 1px solid #e5e7eb; }
+        .subject-box:hover { border-color: #3b82f6; background-color: #eff6ff; }
+        tr.cursor-pointer:hover { background-color: #f9fafb; cursor: pointer; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <header class="gradient-header shadow-lg py-4">
+        <div class="container mx-auto px-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <img src="https://img2.pic.in.th/logo-SW.png" alt="Logo" class="h-12 bg-white p-1 rounded-full shadow">
+                <h1 class="text-white text-xl md:text-2xl font-semibold">ระบบรวมผลงานสถานศึกษา</h1>
+            </div>
+            <button onclick="promptAdminLogin()" class="text-white/80 hover:text-white text-sm flex flex-col items-center gap-1 transition">
+                <i class="fas fa-shield-halved text-lg"></i>
+                <span class="text-[10px]">สำหรับแอดมิน</span>
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-grow container mx-auto px-4 py-8">
+        
+        <div id="homeSection" class="space-y-8">
+            <section class="card max-w-4xl mx-auto p-6 md:p-8">
+                <h2 class="text-2xl font-semibold text-center mb-6 text-gray-700">
+                    <i class="fas fa-edit text-pink-500 mr-2"></i>บันทึกข้อมูลผลงาน
+                </h2>
+                
+                <form id="portfolioForm" onsubmit="submitForm(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">1. ผลงานด้าน (เพื่อจำแนกกลุ่ม) *</label>
+                        <select id="achievementSide" required class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">-- เลือกด้านผลงาน --</option>
+                            <option value="สถานศึกษา">สถานศึกษา</option>
+                            <option value="ครู">ครู</option>
+                            <option value="นักเรียน">นักเรียน</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุลครู *</label>
+                        <input type="text" id="teacherName" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อรางวัล/ผลงาน *</label>
+                        <input type="text" id="awardName" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">กลุ่มสาระการเรียนรู้/งาน *</label>
+                        <select id="subjectGroup" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                            <option value="">-- เลือกกลุ่มสาระ --</option>
+                            <option value="สาระภาษาต่างประเทศ">สาระภาษาต่างประเทศ</option>
+                            <option value="สาระวิทยาศาสตร์และเทคโนโลยี">สาระวิทยาศาสตร์และเทคโนโลยี</option>
+                            <option value="สาระภาษาไทย">สาระภาษาไทย</option>
+                            <option value="สาระคณิตศาสตร์">สาระคณิตศาสตร์</option>
+                            <option value="สาระศิลปศึกษา">สาระศิลปศึกษา</option>
+                            <option value="สาระสุขศึกษาและพลศึกษา">สาระสุขศึกษาและพลศึกษา</option>
+                            <option value="สาระการงานอาชีพ">สาระการงานอาชีพ</option>
+                            <option value="สาระสังคมศึกษา">สาระสังคมศึกษา</option>
+                            <option value="สาระอิสลามศึกษา">สาระอิสลามศึกษา</option>
+                            <option value="งานแนะแนว">งานแนะแนว</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">หน่วยงานที่จัด *</label>
+                        <input type="text" id="organizer" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">วันที่ได้รับรางวัล *</label>
+                        <input type="date" id="awardDate" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">อัปโหลดหลักฐาน (เลือกเพิ่มได้ทีละหลายไฟล์) *</label>
+                        <input type="file" id="evidenceFile" multiple accept="image/*, .pdf" onchange="handleFileSelect(event)" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <div id="fileNameDisplay" class="mt-3 text-sm hidden">
+                            <div class="mb-2 font-medium text-green-600"><i class="fas fa-check-circle mr-1"></i> ไฟล์ที่เลือกเตรียมอัปโหลด:</div>
+                            <ul id="fileNameList" class="space-y-2"></ul>
+                        </div>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียดอื่นๆ</label>
+                        <textarea id="details" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+                    </div>
+                    <div class="md:col-span-2">
+                        <button type="submit" class="w-full btn-primary font-semibold py-3 px-4 rounded-lg shadow-md flex justify-center items-center gap-2">
+                            <i class="fas fa-save"></i> บันทึกข้อมูลผลงาน
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card p-6 overflow-hidden">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                    <h3 class="text-lg font-semibold text-gray-700">7 รายการล่าสุด</h3>
+                    <div class="relative w-full md:w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" onkeyup="searchTable('homeSearch', 'homeTable')" id="homeSearch" placeholder="ค้นหาชื่อรางวัล..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left" id="homeTable">
+                        <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                            <tr>
+                                <th class="px-4 py-3">วัน-เวลาที่บันทึก</th>
+                                <th class="px-4 py-3">ชื่อครู</th>
+                                <th class="px-4 py-3">ชื่อรางวัล</th>
+                                <th class="px-4 py-3">กลุ่มสาระ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="homeTableBody" class="divide-y">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <div id="adminSection" class="hidden-section space-y-8">
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm">
+                <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-chart-line text-blue-600 mr-2"></i>Dashboard ผู้ดูแลระบบ</h2>
+                <div class="flex gap-2">
+                    <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                        <i class="fas fa-file-excel"></i> Excel
+                    </button>
+                    <button onclick="logoutAdmin()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                        ออกจากระบบ
+                    </button>
+                </div>
+            </div>
+
+            <div id="subjectSummaryGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 card p-6">
+                    <h3 class="text-center font-medium text-gray-600 mb-4">จำนวนผลงานรายบุคคล</h3>
+                    <div class="h-80">
+                        <canvas id="teacherBarChart"></canvas>
+                    </div>
+                </div>
+                <div class="card p-6 flex flex-col justify-center items-center">
+                    <h3 class="font-medium text-gray-600 mb-2">ผลงานรวมทั้งหมด</h3>
+                    <div class="text-6xl font-bold text-blue-600" id="totalCount">0</div>
+                    <p class="text-gray-500 mt-2">รายการบันทึก</p>
+                </div>
+            </div>
+
+            <section class="card p-6">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                    <h3 class="text-lg font-semibold text-gray-700">จัดการข้อมูลทั้งหมด</h3>
+                    <div class="relative w-full md:w-80">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                        <input type="text" onkeyup="searchTable('adminSearch', 'adminTable')" id="adminSearch" placeholder="ค้นหาชื่อรางวัลหรือครู..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left" id="adminTable">
+                        <thead class="bg-gray-800 text-white uppercase text-xs">
+                            <tr>
+                                <th class="px-4 py-3">ด้าน</th>
+                                <th class="px-4 py-3">ครู</th>
+                                <th class="px-4 py-3">รางวัล</th>
+                                <th class="px-4 py-3">กลุ่มสาระ</th>
+                                <th class="px-4 py-3 text-center">ไฟล์</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="viewMoreContainer" class="mt-6 text-center">
+                    <button onclick="showMoreAdmin()" class="px-6 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-full hover:bg-blue-100 transition text-sm font-medium">
+                        ดูเพิ่มเติม <i class="fas fa-chevron-down ml-1"></i>
+                    </button>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <footer class="bg-[#f3f4f6] pb-10 pt-4">
+        <div class="container mx-auto px-4 flex flex-col items-center text-[#9ca3af]">
+            <div class="flex items-center gap-2 mb-6">
+                <i class="fas fa-shield-halved"></i>
+                <span class="text-sm">สำหรับแอดมิน</span>
+            </div>
+            
+            <div class="flex flex-col items-center space-y-1">
+                <div class="flex items-center gap-2">
+                    <img src="https://img2.pic.in.th/logo-SW.png" class="h-6 grayscale opacity-70" alt="">
+                    <p class="font-medium text-gray-500">โรงเรียนศรีวารินทร์</p>
+                </div>
+                <p class="text-xs">ระบบรวมผลงานสถานศึกษา – สพม.นราธิวาส</p>
+                <p class="text-xs font-mono mt-4">&lt;\dev\&gt; อับดุลฮากิม อ๊ะหมะ</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // CONFIGURATION
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyeWfa9ob6lBDupWAnKVfjYfGRs6RvAZ9QymXFtbfb6PlhuM448rwOGce3G9yUGWircFg/exec";
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxQZ7-frvj5FoyM5xqRXbhKj8No5JTS9E",
+            authDomain: "schoolaward-9aff3.firebaseapp.com",
+            projectId: "schoolaward-9aff3",
+            storageBucket: "schoolaward-9aff3.firebasestorage.app",
+            messagingSenderId: "1078110712326",
+            appId: "1:1078110712326:web:0b7484ec8b6703dba3c987"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const collectionRef = db.collection("portfolios");
+
+        // Application State
+        let portfolioData = [];
+        let adminLimit = 20;
+        let teacherChart = null;
+        let selectedFilesArray = [];
+        let isAdminViewActive = false;
+
+        window.onload = () => {
+            listenToDatabase();
+        };
+
+        // ฟังการอัปเดตข้อมูลจาก Firebase Real-time
+        function listenToDatabase() {
+            collectionRef.orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+                portfolioData = [];
+                snapshot.forEach((doc) => {
+                    let data = doc.data();
+                    data.id = doc.id; // ใช้ Document ID ของ Firebase
+                    portfolioData.push(data);
+                });
+                
+                renderHomeTable();
+                if (isAdminViewActive) {
+                    renderAdminTable();
+                }
+            }, (error) => {
+                console.error("Firebase Error: ", error);
+            });
+        }
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                Array.from(files).forEach(file => {
+                    selectedFilesArray.push(file);
+                });
+                renderFileList();
+            }
+            event.target.value = '';
+        }
+
+        function renderFileList() {
+            const displayArea = document.getElementById('fileNameDisplay');
+            const fileNameList = document.getElementById('fileNameList');
+            fileNameList.innerHTML = '';
+
+            if (selectedFilesArray.length > 0) {
+                selectedFilesArray.forEach((file, index) => {
+                    const li = document.createElement('li');
+                    li.className = "flex justify-between items-center bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-100";
+                    li.innerHTML = `
+                        <span class="truncate"><i class="fas fa-file-alt mr-2"></i> ${index + 1}. ${file.name}</span>
+                        <button type="button" onclick="removeFile(${index})" class="text-red-400 hover:text-red-600 transition p-1">
+                            <i class="fas fa-times-circle text-lg"></i>
+                        </button>
+                    `;
+                    fileNameList.appendChild(li);
+                });
+                displayArea.classList.remove('hidden');
+            } else {
+                displayArea.classList.add('hidden');
+            }
+        }
+
+        function removeFile(index) {
+            selectedFilesArray.splice(index, 1);
+            renderFileList();
+        }
+
+        // ฟังก์ชันแปลงไฟล์เป็น Base64 สำหรับส่งไป Apps Script
+        function fileToByteArray(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => {
+                    let base64String = reader.result.split(',')[1];
+                    resolve({
+                        base64: base64String,
+                        mimeType: file.type,
+                        fileName: file.name
+                    });
+                };
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        // บันทึกข้อมูล (Upload Files -> Save to Firestore)
+        async function submitForm(e) {
+            e.preventDefault();
+            if (selectedFilesArray.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'กรุณาแนบไฟล์', text: 'ต้องมีไฟล์หลักฐานอย่างน้อย 1 ไฟล์' });
+                return;
+            }
+
+            Swal.fire({ 
+                title: 'กำลังอัปโหลดไฟล์หลักฐาน...', 
+                html: 'กรุณารอสักครู่ ระบบกำลังส่งไฟล์ไปยัง Google Drive',
+                allowOutsideClick: false, 
+                didOpen: () => Swal.showLoading() 
+            });
+
+            try {
+                let uploadedFilesLog = [];
+
+                // วนลูปอัปโหลดไฟล์ทีละไฟล์ไปยัง Google Apps Script
+                for (let file of selectedFilesArray) {
+                    let fileData = await fileToByteArray(file);
+                    
+                    let response = await fetch(GAS_WEB_APP_URL, {
+                        method: "POST",
+                        body: JSON.stringify(fileData)
+                    });
+                    
+                    let result = await response.json();
+                    if (result.success) {
+                        uploadedFilesLog.push({ name: result.name, url: result.url });
+                    } else {
+                        throw new Error(result.error || "Upload failed");
+                    }
+                }
+
+                // สลับมาบันทึกข้อมูล Text และ ลิงก์ไฟล์ลง Firebase Firestore
+                Swal.update({ title: 'กำลังบันทึกข้อมูลลงฐานข้อมูล...' });
+                
+                const now = new Date();
+                const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+                const newData = {
+                    side: document.getElementById('achievementSide').value,
+                    timestamp: ts,
+                    name: document.getElementById('teacherName').value,
+                    award: document.getElementById('awardName').value,
+                    subject: document.getElementById('subjectGroup').value,
+                    organizer: document.getElementById('organizer').value,
+                    date: document.getElementById('awardDate').value,
+                    details: document.getElementById('details').value,
+                    files: uploadedFilesLog
+                };
+
+                await collectionRef.add(newData);
+
+                document.getElementById('portfolioForm').reset();
+                selectedFilesArray = [];
+                renderFileList();
+
+                Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', text: 'ข้อมูลและหลักฐานถูกจัดเก็บเรียบร้อยแล้ว', confirmButtonColor: '#3b82f6' });
+
+            } catch (error) {
+                console.error(error);
+                Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด!', text: 'ไม่สามารถอัปโหลดไฟล์หรือบันทึกข้อมูลได้: ' + error.message });
+            }
+        }
+
+        function searchTable(inputId, tableId) {
+            const input = document.getElementById(inputId);
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById(tableId);
+            const tr = table.getElementsByTagName("tr");
+
+            for (let i = 1; i < tr.length; i++) {
+                let text = tr[i].textContent.toLowerCase();
+                tr[i].style.display = text.includes(filter) ? "" : "none";
+            }
+        }
+
+        function renderHomeTable() {
+            const tbody = document.getElementById('homeTableBody');
+            tbody.innerHTML = "";
+            const latest = portfolioData.slice(0, 7);
+            
+            latest.forEach(item => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-4 py-3">${item.timestamp}</td>
+                        <td class="px-4 py-3 font-medium text-gray-700">${item.name}</td>
+                        <td class="px-4 py-3">${item.award}</td>
+                        <td class="px-4 py-3 text-blue-600 text-xs">${item.subject}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = "";
+            const items = portfolioData.slice(0, adminLimit);
+
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "cursor-pointer transition border-b";
+                tr.onclick = () => showDetail(item);
+                tr.innerHTML = `
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[10px] bg-pink-100 text-pink-700">${item.side}</span></td>
+                    <td class="px-4 py-3 font-medium text-gray-800">${item.name}</td>
+                    <td class="px-4 py-3">${item.award}</td>
+                    <td class="px-4 py-3 text-xs text-gray-500">${item.subject}</td>
+                    <td class="px-4 py-3 text-center text-blue-500"><i class="fas fa-folder-open"></i> ${item.files ? item.files.length : 0}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('viewMoreContainer').style.display = (portfolioData.length > adminLimit) ? "block" : "none";
+            document.getElementById('totalCount').innerText = portfolioData.length;
+            renderSubjectBoxes();
+            renderCharts();
+        }
+
+        function showMoreAdmin() {
+            adminLimit += 20;
+            renderAdminTable();
+        }
+
+        // หน้าต่างแสดงรายละเอียด พร้อม "ปุ่มลบข้อมูล" สำหรับแอดมิน
+        function showDetail(item) {
+            let filesHtml = item.files ? item.files.map(f => `
+                <li>
+                    <a href="${f.url}" target="_blank" class="text-blue-600 hover:text-blue-800 hover:underline flex items-center inline-flex gap-1 py-0.5">
+                        <i class="fas fa-file-alt text-gray-400"></i> ${f.name} <i class="fas fa-external-link-alt text-[10px]"></i>
+                    </a>
+                </li>
+            `).join('') : '<li class="text-gray-500">ไม่มีไฟล์แนบ</li>';
+            
+            Swal.fire({
+                title: `<span class="text-xl">รายละเอียดผลงาน</span>`,
+                html: `
+                    <div class="text-left space-y-3 text-sm p-2">
+                        <p><strong>ด้าน:</strong> ${item.side}</p>
+                        <p><strong>ผู้รับผิดชอบ:</strong> ${item.name}</p>
+                        <p><strong>ชื่อรางวัล:</strong> ${item.award}</p>
+                        <p><strong>กลุ่มสาระ:</strong> ${item.subject}</p>
+                        <p><strong>หน่วยงาน:</strong> ${item.organizer}</p>
+                        <p><strong>วันที่ได้รับ:</strong> ${item.date}</p>
+                        <div class="bg-gray-50 p-3 rounded-lg border">
+                            <p class="font-bold mb-1">รายละเอียด:</p>
+                            <p class="text-gray-600">${item.details || '-'}</p>
+                        </div>
+                        <div class="mt-4">
+                            <p class="font-bold mb-2">ไฟล์หลักฐาน (${item.files ? item.files.length : 0} ไฟล์ - คลิกเพื่อเปิดดู):</p>
+                            <ul class="space-y-1.5">${filesHtml}</ul>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'ปิดหน้าต่าง',
+                cancelButtonText: '<i class="fas fa-trash-alt"></i> ลบข้อมูลนี้',
+                confirmButtonColor: '#4b5563',
+                cancelButtonColor: '#ef4444', // สีแดงสำหรับปุ่มลบ
+                width: '600px'
+            }).then((result) => {
+                // ถ้าแอดมินกดปุ่มยกเลิก (ซึ่งถูกปรับเปลี่ยนเป็นปุ่มลบข้อมูล)
+                if (result.dismiss === Swal.DismissReason.cancel) {
+                    confirmDeleteRecord(item.id, item.award);
+                }
+            });
+        }
+
+        // ฟังก์ชันกดยืนยันการลบข้อมูลออกจาก Firebase Firestore
+        function confirmDeleteRecord(docId, awardName) {
+            Swal.fire({
+                title: 'ยืนยันการลบข้อมูล?',
+                text: `คุณกำลังจะลบข้อมูลรางวัล "${awardName}" การดำเนินการนี้ไม่สามารถย้อนกลับได้!`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#6b7280',
+                confirmButtonText: 'ใช่, ฉันต้องการลบ',
+                cancelButtonText: 'ยกเลิก'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'กำลังลบข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    
+                    // ทำการลบในคอลเลกชัน Firebase
+                    collectionRef.doc(docId).delete().then(() => {
+                        Swal.fire('ลบข้อมูลสำเร็จ!', 'ข้อมูลถูกนำออกจากระบบเรียบร้อยแล้ว', 'success');
+                    }).catch((error) => {
+                        Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถลบข้อมูลได้: ' + error.message, 'error');
+                    });
+                }
+            });
+        }
+
+        function renderSubjectBoxes() {
+            const grid = document.getElementById('subjectSummaryGrid');
+            const subjects = [
+                "สาระภาษาต่างประเทศ", "สาระวิทยาศาสตร์และเทคโนโลยี", "สาระภาษาไทย", "สาระคณิตศาสตร์", 
+                "สาระศิลปศึกษา", "สาระสุขศึกษาและพลศึกษา", "สาระการงานอาชีพ", "สาระสังคมศึกษา", 
+                "สาระอิสลามศึกษา", "งานแนะแนว"
+            ];
+            
+            grid.innerHTML = "";
+            subjects.forEach(sub => {
+                const count = portfolioData.filter(d => d.subject === sub).length;
+                grid.innerHTML += `
+                    <div class="subject-box card p-3 flex flex-col items-center justify-center text-center">
+                        <span class="text-2xl font-bold text-gray-800">${count}</span>
+                        <span class="text-[10px] text-gray-500 leading-tight mt-1">${sub}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderCharts() {
+            const ctx = document.getElementById('teacherBarChart').getContext('2d');
+            const teacherCounts = {};
+            portfolioData.forEach(d => {
+                teacherCounts[d.name] = (teacherCounts[d.name] || 0) + 1;
+            });
+
+            const labels = Object.keys(teacherCounts);
+            const data = Object.values(teacherCounts);
+
+            if(teacherChart) teacherChart.destroy();
+            teacherChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'จำนวนผลงาน (รางวัล)',
+                        data: data,
+                        backgroundColor: '#3b82f6',
+                        borderRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        }
+
+        async function promptAdminLogin() {
+            const { value: pinInput } = await Swal.fire({
+                title: 'ยืนยันตัวตนแอดมิน',
+                input: 'password',
+                inputLabel: 'กรุณากรอกรหัส PIN 6 หลัก',
+                inputAttributes: { maxlength: 6 },
+                showCancelButton: true,
+                confirmButtonColor: '#ec4899'
+            });
+
+            if (pinInput) {
+                // แสดงหน้าต่างโหลดดิ้งระหว่างรอตรวจสอบกับ Firebase
+                Swal.fire({ 
+                    title: 'กำลังตรวจสอบ...', 
+                    allowOutsideClick: false, 
+                    didOpen: () => Swal.showLoading() 
+                });
+
+                try {
+                    // ดึงข้อมูลรหัส PIN จาก Firestore
+                    const docRef = db.collection("config").doc("admin_auth");
+                    const docSnap = await docRef.get();
+                    
+                    if (docSnap.exists) {
+                        const realPin = docSnap.data().pin;
+                        
+                        // นำ PIN ที่ผู้ใช้พิมพ์ มาเทียบกับ PIN ที่ดึงมาจากฐานข้อมูล
+                        if (pinInput === realPin) {
+                            isAdminViewActive = true;
+                            document.getElementById('homeSection').classList.add('hidden-section');
+                            document.getElementById('adminSection').classList.remove('hidden-section');
+                            renderAdminTable();
+                            
+                            Swal.fire({ 
+                                icon: 'success', 
+                                title: 'เข้าสู่ระบบสำเร็จ', 
+                                showConfirmButton: false, 
+                                timer: 1000 
+                            });
+                        } else {
+                            Swal.fire('รหัสผ่านไม่ถูกต้อง', 'กรุณาลองใหม่อีกครั้ง', 'error');
+                        }
+                    } else {
+                        Swal.fire('ข้อผิดพลาด', 'ไม่พบการตั้งค่า PIN ในระบบฐานข้อมูล', 'error');
+                    }
+                } catch (error) {
+                    console.error("Auth Error:", error);
+                    Swal.fire('ข้อผิดพลาด', 'ไม่สามารถเชื่อมต่อฐานข้อมูลได้: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function logoutAdmin() {
+            isAdminViewActive = false;
+            document.getElementById('adminSection').classList.add('hidden-section');
+            document.getElementById('homeSection').classList.remove('hidden-section');
+        }
+
+        function exportToExcel() {
+            const excelData = portfolioData.map(item => {
+                return {
+                    "ผลงานด้าน": item.side,
+                    "วัน-เวลาบันทึก": item.timestamp,
+                    "ชื่อครู": item.name,
+                    "ชื่อรางวัล": item.award,
+                    "กลุ่มสาระ": item.subject,
+                    "หน่วยงานที่จัด": item.organizer,
+                    "วันที่ได้รับ": item.date,
+                    "รายละเอียด": item.details,
+                    "จำนวนไฟล์หลักฐาน": item.files ? item.files.length : 0
+                }
+            });
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Portfolio");
+            XLSX.writeFile(wb, "ผลงานสถานศึกษา.xlsx");
+        }
+    </script>
+</body>
+</html>
