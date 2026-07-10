@@ -629,6 +629,13 @@
 
         function exportToExcel() {
             const excelData = portfolioData.map(item => {
+                
+                // ดึง URL ของไฟล์ทั้งหมดมาต่อกัน (ถ้ามีหลายไฟล์จะคั่นด้วยลูกน้ำ)
+                let fileLinks = "";
+                if (item.files && item.files.length > 0) {
+                    fileLinks = item.files.map(f => f.url).join(', ');
+                }
+
                 return {
                     "ผลงานด้าน": item.side,
                     "วัน-เวลาบันทึก": item.timestamp,
@@ -638,9 +645,11 @@
                     "หน่วยงานที่จัด": item.organizer,
                     "วันที่ได้รับ": item.date,
                     "รายละเอียด": item.details,
-                    "จำนวนไฟล์หลักฐาน": item.files ? item.files.length : 0
+                    "จำนวนไฟล์หลักฐาน": item.files ? item.files.length : 0,
+                    "ลิงก์ไฟล์หลักฐาน": fileLinks // เพิ่มคอลัมน์นี้เข้าไป
                 }
             });
+            
             const ws = XLSX.utils.json_to_sheet(excelData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Portfolio");
