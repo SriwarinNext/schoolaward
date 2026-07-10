@@ -62,7 +62,7 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุลครูหรือนักเรียน *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ชื่อ-นามสกุล ครูหรือนักเรียน *</label>
                         <input type="text" id="teacherName" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
@@ -91,7 +91,7 @@
                         <input type="text" id="organizer" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">วันที่ได้รับรางวัล(เดือน-วัน-ปี ค.ศ.) *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">วันที่ได้รับรางวัล (ดด-วว-ปี ค.ศ.) *</label>
                         <input type="date" id="awardDate" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div>
@@ -103,7 +103,7 @@
                         </div>
                     </div>
                     <div class="md:col-span-2">
-                        <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียดอื่นๆ *</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">รายละเอียดอื่นๆ</label>
                         <textarea id="details" rows="2" class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
                     </div>
                     <div class="md:col-span-2">
@@ -116,7 +116,7 @@
 
             <section class="card p-6 overflow-hidden">
                 <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                    <h3 class="text-lg font-semibold text-gray-700">7 รายการล่าสุด</h3>
+                    <h3 class="text-lg font-semibold text-gray-700">รายการล่าสุด</h3>
                     <div class="relative w-full md:w-64">
                         <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                         <input type="text" onkeyup="searchTable('homeSearch', 'homeTable')" id="homeSearch" placeholder="ค้นหาชื่อรางวัล..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-400">
@@ -152,7 +152,7 @@
                 </div>
             </div>
 
-            <div id="subjectSummaryGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div id="subjectSummaryGrid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -484,10 +484,9 @@
                 confirmButtonText: 'ปิดหน้าต่าง',
                 cancelButtonText: '<i class="fas fa-trash-alt"></i> ลบข้อมูลนี้',
                 confirmButtonColor: '#4b5563',
-                cancelButtonColor: '#ef4444', // สีแดงสำหรับปุ่มลบ
+                cancelButtonColor: '#ef4444', 
                 width: '600px'
             }).then((result) => {
-                // ถ้าแอดมินกดปุ่มยกเลิก (ซึ่งถูกปรับเปลี่ยนเป็นปุ่มลบข้อมูล)
                 if (result.dismiss === Swal.DismissReason.cancel) {
                     confirmDeleteRecord(item.id, item.award);
                 }
@@ -509,7 +508,6 @@
                 if (result.isConfirmed) {
                     Swal.fire({ title: 'กำลังลบข้อมูล...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     
-                    // ทำการลบในคอลเลกชัน Firebase
                     collectionRef.doc(docId).delete().then(() => {
                         Swal.fire('ลบข้อมูลสำเร็จ!', 'ข้อมูลถูกนำออกจากระบบเรียบร้อยแล้ว', 'success');
                     }).catch((error) => {
@@ -519,9 +517,9 @@
             });
         }
 
+        // ฟังก์ชันสร้างกล่องสรุปผลงาน พร้อมจำแนกด้าน (สถานศึกษา, ครู, นักเรียน)
         function renderSubjectBoxes() {
             const grid = document.getElementById('subjectSummaryGrid');
-            // เพิ่ม "ผู้บริหาร" เข้าไปในลิสต์
             const subjects = [
                 "ผู้บริหาร", "สาระภาษาต่างประเทศ", "สาระวิทยาศาสตร์และเทคโนโลยี", "สาระภาษาไทย", "สาระคณิตศาสตร์", 
                 "สาระศิลปศึกษา", "สาระสุขศึกษาและพลศึกษา", "สาระการงานอาชีพ", "สาระสังคมศึกษา", 
@@ -530,11 +528,25 @@
             
             grid.innerHTML = "";
             subjects.forEach(sub => {
-                const count = portfolioData.filter(d => d.subject === sub).length;
+                // คัดกรองข้อมูลเฉพาะกลุ่มสาระนี้
+                const subjectData = portfolioData.filter(d => d.subject === sub);
+                const count = subjectData.length;
+                
+                // นับแยกตามด้านผลงาน
+                const countSchool = subjectData.filter(d => d.side === 'สถานศึกษา').length;
+                const countTeacher = subjectData.filter(d => d.side === 'ครู').length;
+                const countStudent = subjectData.filter(d => d.side === 'นักเรียน').length;
+
                 grid.innerHTML += `
                     <div class="subject-box card p-3 flex flex-col items-center justify-center text-center">
                         <span class="text-2xl font-bold text-gray-800">${count}</span>
-                        <span class="text-[10px] text-gray-500 leading-tight mt-1">${sub}</span>
+                        <span class="text-[11px] font-semibold text-blue-600 leading-tight mt-1 mb-2 h-6 flex items-center">${sub}</span>
+                        
+                        <div class="w-full text-[10px] text-gray-500 border-t border-gray-100 pt-2 space-y-1">
+                            <div class="flex justify-between w-full px-2"><span>สถานศึกษา:</span> <span class="font-medium">${countSchool}</span></div>
+                            <div class="flex justify-between w-full px-2"><span>ครู:</span> <span class="font-medium">${countTeacher}</span></div>
+                            <div class="flex justify-between w-full px-2"><span>นักเรียน:</span> <span class="font-medium">${countStudent}</span></div>
+                        </div>
                     </div>
                 `;
             });
