@@ -1,3 +1,8 @@
+ได้เลยครับ ผมได้เพิ่มตัวเลือก **"ผู้บริหาร"** เข้าไปในส่วนของ **กลุ่มสาระการเรียนรู้/งาน** ทั้งในส่วนของฟอร์มกรอกข้อมูล และในส่วนของกล่องสรุปผลงาน (Dashboard) เรียบร้อยแล้วครับ
+
+และนี่คือโค้ดฉบับสมบูรณ์ที่รวมทุกฟีเจอร์ที่เราทำมาทั้งหมด (Firebase, Google Drive, อัปโหลดหลายไฟล์, ระบบล็อกอินแอดมินด้วยฐานข้อมูล, การโหลด Excel พร้อมลิงก์ไฟล์ และการลบข้อมูล) คุณสามารถคัดลอกโค้ดทั้งหมดนี้ไปทับในไฟล์ `index.html` ของคุณได้เลยครับ:
+
+```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -73,6 +78,7 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">กลุ่มสาระการเรียนรู้/งาน *</label>
                         <select id="subjectGroup" required class="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
                             <option value="">-- เลือกกลุ่มสาระ --</option>
+                            <option value="ผู้บริหาร">ผู้บริหาร</option>
                             <option value="สาระภาษาต่างประเทศ">สาระภาษาต่างประเทศ</option>
                             <option value="สาระวิทยาศาสตร์และเทคโนโลยี">สาระวิทยาศาสตร์และเทคโนโลยี</option>
                             <option value="สาระภาษาไทย">สาระภาษาไทย</option>
@@ -221,7 +227,7 @@
 
     <script>
         // CONFIGURATION
-        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyeWfa9ob6lBDupWAnKVfjYfGRs6RvAZ9QymXFtbfb6PlhuM448rwOGce3G9yUGWircFg/exec";
+        const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxSwS-aLhqrLEtfQqxkzLFsOEvFr8CPg8ZmotgWrYh4yGqWl6aUAgVSg-K363gGoRswqQ/exec";
         
         const firebaseConfig = {
             apiKey: "AIzaSyDxQZ7-frvj5FoyM5xqRXbhKj8No5JTS9E",
@@ -520,8 +526,9 @@
 
         function renderSubjectBoxes() {
             const grid = document.getElementById('subjectSummaryGrid');
+            // เพิ่ม "ผู้บริหาร" เข้าไปในลิสต์
             const subjects = [
-                "สาระภาษาต่างประเทศ", "สาระวิทยาศาสตร์และเทคโนโลยี", "สาระภาษาไทย", "สาระคณิตศาสตร์", 
+                "ผู้บริหาร", "สาระภาษาต่างประเทศ", "สาระวิทยาศาสตร์และเทคโนโลยี", "สาระภาษาไทย", "สาระคณิตศาสตร์", 
                 "สาระศิลปศึกษา", "สาระสุขศึกษาและพลศึกษา", "สาระการงานอาชีพ", "สาระสังคมศึกษา", 
                 "สาระอิสลามศึกษา", "งานแนะแนว"
             ];
@@ -580,7 +587,6 @@
             });
 
             if (pinInput) {
-                // แสดงหน้าต่างโหลดดิ้งระหว่างรอตรวจสอบกับ Firebase
                 Swal.fire({ 
                     title: 'กำลังตรวจสอบ...', 
                     allowOutsideClick: false, 
@@ -588,14 +594,12 @@
                 });
 
                 try {
-                    // ดึงข้อมูลรหัส PIN จาก Firestore
                     const docRef = db.collection("config").doc("admin_auth");
                     const docSnap = await docRef.get();
                     
                     if (docSnap.exists) {
                         const realPin = docSnap.data().pin;
                         
-                        // นำ PIN ที่ผู้ใช้พิมพ์ มาเทียบกับ PIN ที่ดึงมาจากฐานข้อมูล
                         if (pinInput === realPin) {
                             isAdminViewActive = true;
                             document.getElementById('homeSection').classList.add('hidden-section');
@@ -629,8 +633,6 @@
 
         function exportToExcel() {
             const excelData = portfolioData.map(item => {
-                
-                // ดึง URL ของไฟล์ทั้งหมดมาต่อกัน (ถ้ามีหลายไฟล์จะคั่นด้วยลูกน้ำ)
                 let fileLinks = "";
                 if (item.files && item.files.length > 0) {
                     fileLinks = item.files.map(f => f.url).join(', ');
@@ -646,7 +648,7 @@
                     "วันที่ได้รับ": item.date,
                     "รายละเอียด": item.details,
                     "จำนวนไฟล์หลักฐาน": item.files ? item.files.length : 0,
-                    "ลิงก์ไฟล์หลักฐาน": fileLinks // เพิ่มคอลัมน์นี้เข้าไป
+                    "ลิงก์ไฟล์หลักฐาน": fileLinks
                 }
             });
             
